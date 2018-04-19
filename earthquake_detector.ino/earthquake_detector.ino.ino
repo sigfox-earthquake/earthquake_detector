@@ -45,14 +45,20 @@
 
 #define DEBUG 1
 // Variables
+uint8_t msg[12];
+typedef struct {
+    int32_t latitude;       ///< Latitude in 1/100000 degrees, South if < 0, North otherwise
+    int32_t longitude;        ///< Longitude in 1/100000 degrees, West if < 0, East otherwise
+    int16_t altitude;       ///< Altitude in meters above sea level
+  } TD_GEOLOC_Position_t;
 
 
 // Sigfox
 SoftwareSerial Sigfox =  SoftwareSerial(txSigfox, rxSigfox);
-uint8_t msg[12];
+
 
 // GPS
-//SoftwareSerial GPS =  SoftwareSerial(txGPS, rxGPS);
+SoftwareSerial GPS =  SoftwareSerial(txGPS, rxGPS);
 
 // Accelerometer
 
@@ -78,10 +84,33 @@ void loop() {
   
 }
 
+void setupDevice(){
+  // This function is used to setup the device in the field.
+  // It must get the GPS information: Lat, Long, Alt and store them in memory
+  // It must sync the internal clock
+  // If the GPS acquisition went well, it must send a Sigfox message with:
+  // - The message type indicator (setup)
+  // - The battery level
+  // - The lat, long, alt
+  // If it went wrong (no GPS information for instance):
+  // - The message type indicator
+  // - The battery level
+}
+
+void fixGPS(int timout){
+  // Function to get a GPS fix, with the timeout in seconds as a parameter.
+  // The timeout is maximum time for the device to get the GPS. 
+  // If the timeout value is reached, return an error value.
+  
+  unsigned long latitude, longitude, altitude;
+  int hdop, nbSat, acqTime, speed, size;
+}
+
 
 //Send Sigfox Message
 void sendMessage(uint8_t msg[], int size){
-
+  // This function is used to send the Sigfox messages
+  
   String status = "";
   char output;
 
