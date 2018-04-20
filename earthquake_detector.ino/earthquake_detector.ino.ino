@@ -168,12 +168,15 @@ static void setupDevice(){
  *  shutting down the GPS or not is left to the user application and should be
  *  done using GPS_StopFix.
  *
- * @param[in] precision
- *   Stop the GPS when fix type precision has fullfiled requirements
+ * @param[in] callback
+ *   Pointer to a function that will be called each time a parameter
+ *   is being updated (time, position, speed, etc..).
+ *   Fix is a pointer to a structure containing fix information.
+ *   Timeout will be set to true when the specified timeout expired
  *
  *
  ******************************************************************************/
-void startGPSFix(uint16_t timeout, GPS_FixType precision){
+void startGPSFix(uint16_t timeout, void (*callback)(GPS_Fix *fix, bool timeout)){
   
 }
 
@@ -200,8 +203,11 @@ static void StopGPSFix(){
  *   Flag that indicates whether a timeout occurred if set to true.
  ******************************************************************************/
 static void GPSFix(GPS_Fix * fix, bool timeout){
-  StopGPSFix();
+  //
+  //
   
+  //At the end stop GPS
+  StopGPSFix();
 }
 
 
