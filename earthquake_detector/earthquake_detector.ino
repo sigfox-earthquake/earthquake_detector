@@ -7,40 +7,36 @@
  * (https://github.com/hidnseek/hidnseek) to detect earthquakes and send the relative information using Sigfox network.
  * 
  */
+///////////////////////////
+#include "EEPROM.h"
+#include "def.h"
+#include "HidnSeek.h"
+///////////////////////////accel////////////
+#include <Streaming.h>
+#include <FluMMA865xI2C.h>        // Accelerometer I2C bus communication
+#include <FluMMA865xR.h>          // Accelerometer configuration and data register layout
+#include <FluMMA865x.h>           // Accelerometer basic utility functions
+#include <AccelDataT.h>           // A 3D Vector data type for x/y/z data
+
+uint16_t                   convFactMicrograv; // factor for conversion from lsb to micrograv
+AccelDataT<int16_t>        accelLsb;
+FluMMA865xR::IntSourceRegT lastIntSourceR;
+
+FluMMA865x           accel;
+FluMMA865xI2C        comms;
+InitializeFluMMA865x ini;
+Accel                accelero;
+/////////////////////////////////
 
 #include "LowPower.h"
 #include "TinyGPS.h"
 #include <SoftwareSerial.h>
 #include "Wire.h"
-#include "mma8652.h"
+//#include "mma8652.h"
 
-/****************** Pins usage ***************************************/
-#define rxGPS            0     // PD0 RX Serial from GPS
-#define txGPS            1     // PD1 TX Serial to GPS
-#define usbDP            2     // PD2 Shutdown supply after power off
-#define accINT           3     // PD3 Accelerometer Interruption
-#define usbDM            4     // PD4
-#define txSigfox         5     // PD5 TX Serial to Sigfox modem
-#define bluLEDpin        6     // PD6 Piezzo Output
-#define redLEDpin        7     // PD7 Red LED Status
-#define rxSigfox         8     // PB0 RX Serial from Sigfox modem
-#define shdPin           9     // PB1 Shutdown pin
-#define rstPin          10     // PB2 SS   SDCARD
-#define msiPin          11     // PB3 MOSI SDCARD
-#define msoPin          12     // PB4 MISO SDCARD
-#define sckPin          13     // PB5 SCK  SDCARD
-#define sensorA0        A0     // PC0 VUSB present
-#define sensorBatt      A1     // PC1 battery voltage
-#define chg100mA        A2
-#define satLEDpin       A3
-#define sensorA4        A4     // PC4 A4 SDA
-//                      A5     // PC5 A5 SCL
-#define sensorA6        A6     // PC6
-#define chgFLAG         A7
-/*********************************************************************/
+HidnSeek HidnSeek(txSigfox, rxSigfox);/////not sure if we need this (could just add code for GPIOinit())
 
 // Info
- 
 
 
 #define DEBUG 1
@@ -103,6 +99,8 @@ uint8_t msg[12];
 
   //Accelero
 
+
+
   //Battery
 
 
@@ -114,10 +112,11 @@ SoftwareSerial Sigfox =  SoftwareSerial(txSigfox, rxSigfox);
 SoftwareSerial GPS =  SoftwareSerial(txGPS, rxGPS);
 
 // Accelerometer
-
+int n = 0;
 void setup() {
   if(DEBUG){
     Serial.begin(9600);
+    Serial.println("Debug mode");
     delay(100);
   } 
   
@@ -130,11 +129,25 @@ void setup() {
   delay(100);
 
   //Declare other variables
+  pinMode(DIGITAL_OUTPUT, OUTPUT);
 
+////////////HS battery config///////////
+  HidnSeek.initGPIO(false);
+  initSense();
+  batterySense();
+  serialString(PSTR(" Battery: "));
+  Serial.print(batteryPercent);
+  serialString(PSTR("% "));
+  Serial.println(batteryValue);
+  delay(100);
+ /////////////accel init///
+ ini.begin();
 }
 
 void loop() {
-  
+  accelero.work();
+
+    //HidnSeek.setPower(4); //0,4,47
 }
 
 /***************************************************************************//**
@@ -248,7 +261,7 @@ void sendMessage(uint8_t msg[], int size){
   Sigfox.print("\r");
 
   while (!Sigfox.available()){
-     blink();
+     blink(1);
   }
   while(Sigfox.available()){
     output = (char)Sigfox.read();
@@ -269,7 +282,7 @@ String getID(){
 
   Sigfox.print("ATI7\r");
   while (!Sigfox.available()){
-     blink();
+     blink(1);
   }
   while(Sigfox.available()){
     output = Sigfox.read();
@@ -284,9 +297,40 @@ String getID(){
 }
 
 // Blink can be used for debug
-void blink(){
-  digitalWrite(bluLEDpin, HIGH);   // turn the LED on (HIGH is the voltage level)
-  delay(1000);                       // wait for a second
-  digitalWrite(bluLEDpin, LOW);    // turn the LED off by making the voltage LOW
-  delay(1000);
+void blink(bool c){
+  
+  if (c == 1) {
+    digitalWrite(bluLEDpin, HIGH);   // turn the LED on (HIGH is the voltage level)
+    delay(1000);                       // wait for a second
+    digitalWrite(bluLEDpin, LOW);    // turn the LED off by making the voltage LOW
+    delay(1000);
+  }
+  else {
+    digitalWrite(redLEDpin, HIGH);   // turn the LED on (HIGH is the voltage level)
+    delay(1000);                       // wait for a second
+    digitalWrite(redLEDpin, LOW);    // turn the LED off by making the voltage LOW
+    delay(1000);
+  }
 }
+
+
+
+
+
+
+
+
+//helpers
+void serialString (PGM_P s) {
+
+  char c;
+  while ((c = pgm_read_byte(s++)) != 0)
+    Serial.print(c);
+}
+
+void saveEEprom() {
+  if (today > 0 && today < 32) {
+    EEPROM.write(today, MsgCount);
+  }
+}
+
