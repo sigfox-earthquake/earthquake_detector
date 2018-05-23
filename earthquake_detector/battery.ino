@@ -8,14 +8,14 @@
  *
  */
 
-unsigned int sensorMax;
+//unsigned int sensorMax;
 
 void initSense() {
   byte lowByte = EEPROM.read(ADDR_CAL_LOW);
   byte highByte = EEPROM.read(ADDR_CAL_HIGH);
   sensorMax = ((lowByte << 0) & 0xFF) + ((highByte << 8) & 0xFF00);
   serialString(PSTR("SensorMax: "));
-  Serial.println(sensorMax);
+  if (DEBUG) Serial.print(sensorMax);
   sensorMax = 980;
 }
 
@@ -74,7 +74,7 @@ void shutdownSys() { // 3.57V on battery voltage
   digitalWrite(rstPin, LOW);
   serialString(PSTR("Low Bat: "));
   saveEEprom();
-//  sendSigFox(MSG_WEAK_BAT);
+//  sendSigFox(MSG_WEAK_BAT);///////////////////////////////////////////////
   digitalWrite(shdPin, LOW);
   delay(500);
 }

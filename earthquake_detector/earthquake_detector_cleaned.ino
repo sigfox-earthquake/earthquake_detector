@@ -7,11 +7,16 @@
  * (https://github.com/hidnseek/hidnseek) to detect earthquakes and send the relative information using Sigfox network.
  * 
  */
-///////////////////////////
+
 #include "EEPROM.h"
 #include "def.h"
 #include "HidnSeek.h"
-///////////////////////////accel////////////
+#include "LowPower.h"
+#include "TinyGPS.h"
+#include <SoftwareSerial.h>
+#include "Wire.h"
+
+// Accelerometer
 #include <Streaming.h>
 #include <FluMMA865xI2C.h>        // Accelerometer I2C bus communication
 #include <FluMMA865xR.h>          // Accelerometer configuration and data register layout
@@ -24,24 +29,14 @@ FluMMA865xR::IntSourceRegT lastIntSourceR;
 
 FluMMA865x           accel;
 FluMMA865xI2C        comms;
-InitializeFluMMA865x ini;
+InitializeFluMMA865x init_accel;
 Accel                accelero;
-/////////////////////////////////
-
-#include "LowPower.h"
-#include "TinyGPS.h"
-#include <SoftwareSerial.h>
-#include "Wire.h"
-//#include "mma8652.h"
 
 HidnSeek HidnSeek(txSigfox, rxSigfox);/////not sure if we need this (could just add code for GPIOinit())
 
 // Info
 
-
-#define DEBUG 1
-
-// Variables
+// Variables in def.h
 
    //Sigfox
 uint8_t msg[12];
@@ -50,18 +45,19 @@ uint8_t msg[12];
     //Position structure, data stored as degrees, decimals minutes
   typedef struct {
     int32_t latitude;       ///< Latitude in 1/100000 degrees, South if < 0, North otherwise
-    int32_t longitude;        ///< Longitude in 1/100000 degrees, West if < 0, East otherwise
+    int32_t longitude;      ///< Longitude in 1/100000 degrees, West if < 0, East otherwise
     int16_t altitude;       ///< Altitude in meters above sea level
   } GPS_Position;
 
   //Date & Time structure
   typedef struct {
-    uint16_t year;          ///< Year UTC
-    uint8_t seconds;        ///< Seconds 0..59
-    uint8_t minutes;        ///< Minutes 0..59
-    uint8_t hours;          ///< Hours 0..23
-    uint8_t day;            ///< Days 1.31
-    uint8_t month;          ///< Month 1..12
+    uint16_t year = 0;          ///< Year UTC
+    uint8_t hundredths = 0;     //
+    uint8_t second = 0;         ///< Seconds 0..59
+    uint8_t minute = 0;         ///< Minutes 0..59
+    uint8_t hour = 0;           ///< Hours 0..23
+    uint8_t day = 0;            ///< Days 1.31
+    uint8_t month = 0;          ///< Month 1..12
   } GPS_DateTime;
 
   // Quality structure
@@ -96,29 +92,76 @@ uint8_t msg[12];
     uint32_t duration;        ///< Fix duration in seconds
   } GPS_Fix;
 
-
   //Accelero
 
-
-
   //Battery
-
 
 // Sigfox
 SoftwareSerial Sigfox =  SoftwareSerial(txSigfox, rxSigfox);
 
-
 // GPS
+TinyGPS gps;///////added
 SoftwareSerial GPS =  SoftwareSerial(txGPS, rxGPS);
+GPS_Fix gps_fix;
 
 // Accelerometer
-int n = 0;
+
+
+struct Payload {
+  float lat;
+  float lon;
+  uint32_t cpx;
+};
+
+Payload p;
+uint16_t alt = 0;
+uint16_t spd = 0;
+uint8_t  sat = 0;
+uint8_t  syncSat = 0;
+uint8_t  noSat = 0;
+
+// RAM check
+int freeRam () {
+  extern int __heap_start, *__brkval;
+  int v;
+  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
+}
+
+// Everytime interrupt, this function can be called
+void interruptFuction()
+{
+  // Set previous largest values back to 0
+  largest_x = largest_y = largest_z = 0;
+}
+
+// Everytime interrupt, this function can be called
+void sleepFuction()
+{
+  if (DEBUG){
+    Serial.println((String)"LARGEST x: " + largest_x + " y: " + largest_y + " z: " + largest_z);
+    Serial.println((String)"Start: " + start);
+    Serial.println(millis()/1000);
+  }
+  calibrateClock();
+  if (DEBUG)
+  {
+    print_date();
+    Serial.println();
+  }
+}
+
+void wakeUp()
+{
+  if (DEBUG) Serial.println("Wake");
+//  LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
+}
+
 void setup() {
   if(DEBUG){
     Serial.begin(9600);
     Serial.println("Debug mode");
     delay(100);
-  } 
+  }
   
   Sigfox.begin(9600);
   delay(100);
@@ -130,24 +173,91 @@ void setup() {
 
   //Declare other variables
   pinMode(DIGITAL_OUTPUT, OUTPUT);
+  pinMode(DIGITAL_PULLUP, INPUT_PULLUP);
 
-////////////HS battery config///////////
+  //init GPIO
   HidnSeek.initGPIO(false);
-  initSense();
-  batterySense();
-  serialString(PSTR(" Battery: "));
-  Serial.print(batteryPercent);
-  serialString(PSTR("% "));
-  Serial.println(batteryValue);
-  delay(100);
- /////////////accel init///
- ini.begin();
+
+  //init battery
+  init_battery();
+
+  //init accelerometer
+  init_accel.begin();
+
+  //GPS, RAM
+  setupDevice();
+
+  //Set start millis() and initial time offset for clock calibration
+  start = millis();
+  if (DEBUG) Serial.println(start);
+  initial_time =  (gps_fix.datetime.day * SECS_PER_DAY) +
+                  (gps_fix.datetime.hour * SECS_PER_HOUR) +
+                  (gps_fix.datetime.minute * SECS_PER_MIN) +
+                  gps_fix.datetime.second - (start/1000);
+
+  //  calibrateClock();
 }
 
 void loop() {
+  // Get accelerometer info
   accelero.work();
+  
+  // Hour loop to calibrate clock based on GPS
+  if(millis() - timeLastGPS > CLOCK_FIX_LOOP * SECS_PER_MIN){
+    if (DEBUG) Serial.println("Recalibrate clock/gps");
+    // Get GPS info
+    startGPSFix();
+    delay(10);
+    start = millis();
+    initial_time =  (gps_fix.datetime.day * SECS_PER_DAY) +
+                    (gps_fix.datetime.hour * SECS_PER_HOUR) +
+                    (gps_fix.datetime.minute * SECS_PER_MIN) +
+                    gps_fix.datetime.second - (start/1000);
+  }
 
-    //HidnSeek.setPower(4); //0,4,47
+  // Put device to sleep after x amount of time
+//  sleep_device();
+}
+
+/***************************************************************************//**
+ * @brief
+   This function is used to sleep the hidnseek device
+   Sleeps after DEVICE_SLEEP_LOOP amount of seconds
+   (Need to attach an interrupt to be able to wake device from accINT)
+ *
+ * @param[in] none at the moment
+
+ ******************************************************************************/
+static void sleep_device()
+{
+  // Put device to sleep after x amount of time after the last interrupt
+  if(millis() - timeLastTransient > DEVICE_SLEEP_LOOP * 1000){
+    if (DEBUG) Serial.println("Hidenseek sleeping");
+    delay(100);
+    LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
+  }
+}
+
+/***************************************************************************//**
+ * @brief
+   This function is used to setup the battery
+   It prints the value and percentage if in DEGUG mode
+ *
+ * @param[in] none at the moment
+
+ ******************************************************************************/
+static void init_battery()
+{
+  initSense();
+  batterySense();
+  if (DEBUG) 
+  {
+    serialString(PSTR(" Battery: "));
+    Serial.print(batteryPercent);
+    serialString(PSTR("% "));
+    Serial.println(batteryValue);
+  }
+  delay(100);
 }
 
 /***************************************************************************//**
@@ -167,7 +277,22 @@ void loop() {
 
  ******************************************************************************/
 static void setupDevice(){
-  
+  // Print availible RAM
+  if (DEBUG)
+  {
+    serialString(PSTR("free Ram: "));
+    Serial.println(freeRam());
+  }
+
+  // Get GPS info
+  startGPSFix();
+
+  // Send message if succesfull
+// sendMessage(0x4, 8);
+//  if (GPSactive = gpsInit()) {
+//    gpsCmd(PSTR(PMTK_VERSION));
+//    blink(2);
+//  }
 }
 
 /***************************************************************************//**
@@ -189,8 +314,10 @@ static void setupDevice(){
  *
  *
  ******************************************************************************/
-void startGPSFix(uint16_t timeout, void (*callback)(GPS_Fix *fix, bool timeout)){
-  
+void startGPSFix(){//uint16_t timeout, void (*callback)(GPS_Fix *fix, bool timeout)){
+  while (!gpsProcess())
+    if (DEBUG) Serial.println("Not calibrated");
+  gpsProcess();
 }
 
 
@@ -223,8 +350,6 @@ static void GPSFix(GPS_Fix * fix, bool timeout){
   StopGPSFix();
 }
 
-
-
 /***************************************************************************//**
  * @brief
  *  Calibrate internal clock
@@ -235,14 +360,19 @@ static void GPSFix(GPS_Fix * fix, bool timeout){
  * @param[in] timeout
  *   Flag that indicates whether a timeout occurred if set to true.
  ******************************************************************************/
+
 void calibrateClock(){
-  
+  // Resets initial_time when you check the gps again
+  long val = (millis()/1000) + initial_time;
+  //Serial.println((String)"val: " + val + " initial_time: " + initial_time + " millis: " + millis());
+  //Serial.println();
+  gps_fix.datetime.day = elapsedDays(val);
+  gps_fix.datetime.hour = numberOfHours(val);
+  gps_fix.datetime.minute = numberOfMinutes(val);
+  gps_fix.datetime.second = numberOfSeconds(val);
 }
 
-
-
-
-//Send Sigfox Message
+// Send Sigfox Message
 void sendMessage(uint8_t msg[], int size){
   // This function is used to send the Sigfox messages
   
@@ -296,6 +426,7 @@ String getID(){
   return id;
 }
 
+// Helper functions
 // Blink can be used for debug
 void blink(bool c){
   
@@ -313,14 +444,6 @@ void blink(bool c){
   }
 }
 
-
-
-
-
-
-
-
-//helpers
 void serialString (PGM_P s) {
 
   char c;

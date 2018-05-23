@@ -13,7 +13,7 @@ void Accel::work()
   FluMMA865xR::IntSourceRegT intSourceR;
   FluMMA865xR::StatusRegT    statusR;
   intSourceR.v = comms.readByte(FluMMA865xR::INT_SOURCE); // check if any interrupts are pending
-  
+
   if(0 != intSourceR.v && intSourceR.v != lastIntSourceR.v)
   {
     //intSourceR.print();
@@ -24,46 +24,41 @@ void Accel::work()
   {
     statusR.v = comms.readByte(FluMMA865xR::F_STATUS); // clear all int flags by reading F_STATUS and data output regs
     if(statusR.f.ZYXDR) accelDataHandler();
-    else Serial << F("spurious SRC_DRDY interrupt\n");
+    else if (DEBUG) Serial << F("spurious SRC_DRDY interrupt\n");
   }
 
   if(intSourceR.f.SRC_ASLP) // Int source: sleep/wake Int
   {
-    Serial << F("SLEEP/ACTIVE\n");
+    sleepFuction();
+    if (DEBUG) Serial.println((String)"SLEEP/ACTIVE");
     comms.readByte(FluMMA865xR::SYSMOD); // clear sleep interrupt by reading SYSMOD
   }
 
-  if(intSourceR.f.SRC_TRANS)  transientHandler();   // handles transient event = transient IRQ
-  if(intSourceR.f.SRC_PULSE)  pulseHandler();       // handles pulse/tap event
+  if(intSourceR.f.SRC_TRANS)  {interruptFuction();transientHandler();}   // handles transient event = transient IRQ
 }
-
 
 void Accel::accelDataHandler()
 {
   accelLsb = accel.readData();
-  if(abs(accelLsb.x) > 1 || abs(accelLsb.y) > 1 || abs(accelLsb.z) > 1)
-      Serial << "," << accelLsb.x       << F(",") << accelLsb.y       << F(",") << accelLsb.z
+  if(abs(accelLsb.x) > 1 || abs(accelLsb.y) > 1 || abs(accelLsb.z) > 1) {
+      if (DEBUG) Serial << "," << accelLsb.x       << F(",") << accelLsb.y       << F(",") << accelLsb.z
            << "\n";
+           
+      check_largest(accelLsb.x, accelLsb.y, accelLsb.z);
+  }
 }
-
 
 void Accel::transientHandler()
 {
-  static uint32_t timeLastTransient = 0;
+  timeLastTransient = 0;
   FluMMA865xR::TransientSrcRegT transientSrcR;
   
   if(millis() - timeLastTransient   <   100) return;
 
   transientSrcR.v = comms.readByte(FluMMA865xR::TRANSIENT_SRC);
-  if(!transientSrcR.f.EA) Serial << F("spurious transient interrupt\n");
+  if(!transientSrcR.f.EA && DEBUG) Serial << F("spurious transient interrupt\n");
+  
 //  transientSrcR.print();//uncomment to print when transient event
   timeLastTransient = millis();
-}
-
-void Accel::pulseHandler()
-{
-  FluMMA865xR::PulseSrcRegT pulseSrcR;
-  pulseSrcR.v = comms.readByte(FluMMA865xR::PULSE_SRC);  // Reads the PULSE_SRC register
-//  pulseSrcR.print();//uncomment to see when pulse event happens
 }
 
