@@ -17,6 +17,7 @@
 #include "Wire.h"
 
 // Accelerometer
+#include <Streaming.h>
 #include <FluMMA865xI2C.h>        // Accelerometer I2C bus communication
 #include <FluMMA865xR.h>          // Accelerometer configuration and data register layout
 #include <FluMMA865x.h>           // Accelerometer basic utility functions
