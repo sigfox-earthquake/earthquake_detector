@@ -10,7 +10,9 @@ These instructions will get you a copy of the project up and running on your dev
 
 Libraries needed:
 Hidnseek library: https://github.com/hidnseek/hidnseek (Also setup instructions for device)
+
 Accelerometer library: https://github.com/Flummy/FluMMA865x
+
 Streaming library from: https://github.com/kachok/arduino-libraries
 
 ### Installing
