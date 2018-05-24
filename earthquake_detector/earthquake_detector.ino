@@ -51,7 +51,7 @@ uint8_t msg[12];
 
   //Date & Time structure
   typedef struct {
-    uint16_t year = 0;          ///< Year UTC
+    int16_t year = 0;          ///< Year UTC
     uint8_t hundredths = 0;     //
     uint8_t second = 0;         ///< Seconds 0..59
     uint8_t minute = 0;         ///< Minutes 0..59
@@ -130,8 +130,7 @@ int freeRam () {
 // Everytime interrupt, this function can be called
 void interruptFuction()
 {
-  // Set previous largest values back to 0
-  largest_x = largest_y = largest_z = 0;
+  // Add code here for interrupt action code
 }
 
 // Everytime interrupt, this function can be called
@@ -142,7 +141,11 @@ void sleepFuction()
     Serial.println((String)"Start: " + start);
     Serial.println(millis()/1000);
   }
+  // Set previous largest values back to 0
+  largest_x = largest_y = largest_z = 0;
+
   calibrateClock();
+
   if (DEBUG)
   {
     print_date();
@@ -234,7 +237,8 @@ void loop() {
 static void sleep_device()
 {
   // Put device to sleep after x amount of time after the last interrupt
-  if(millis() - timeLastTransient > DEVICE_SLEEP_LOOP * 1000){
+  unsigned int long sleep_loop_millis = DEVICE_SLEEP_LOOP * 1000;
+  if(millis() - timeLastTransient > sleep_loop_millis){
     if (DEBUG) Serial.println("Hidenseek sleeping");
     delay(100);
     LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
