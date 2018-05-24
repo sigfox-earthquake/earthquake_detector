@@ -13,26 +13,26 @@
 //const int offset = -5;  // Eastern Standard Time (USA)
 //const int offset = -4;  // Eastern Daylight Time (USA)
 //const int offset = -8;  // Pacific Standard Time (USA)
-//const int offset = -7;  // Pacific Daylight Time (USA)
+const int offset = -7;  // Pacific Daylight Time (USA)
 
 //modifiable variables
 
-#define DEBUG 1                  // 1 = DEBUG mode, 0 = regulare
+#define DEBUG 1                   // 1 = DEBUG mode, 0 = regulare
 
-#define CLOCK_FIX_LOOP 60        //Time in minutes to recalibrate clock based on GPS
-#define DEVICE_SLEEP_LOOP 60     //Time in seconds to recalibrate clock based on GPS
+#define CLOCK_FIX_LOOP 60         // Time in minutes to recalibrate clock based on GPS
+#define DEVICE_SLEEP_LOOP 60      // Time in seconds to recalibrate clock based on GPS
 
-#define MASS 45             //mass of device
+#define MASS 45                   // Mass of device
 
-#define ACCEL_MODE AFS_2g   // AFS_(2,4,8)g scale for the accelerometer
-#define ACCEL_TRIG 3        // threshold (0-127) for trigger (TRANSIENT interrupt)
+#define ACCEL_MODE AFS_2g         // AFS_(2,4,8)g scale for the accelerometer
+#define ACCEL_TRIG 3              // Threshold (0-127) for trigger (TRANSIENT interrupt)
 
-#define SLP_CNT 5          //sleep count in approximate seconds after interrupt max 85
-#define DATA_RATE AODR_50HZ //Accel output data rate (Highest-lowest)
-                            //(AODR_800HZ, AODR_400HZ, AODR_200HZ, AODR_100HZ, AODR_50HZ, AODR_12_5HZ, AODR_6_25HZ, AODR_1_56HZ)
-#define SLEEP_DATA_RATE B11 ////Asleep data rate for low power 11 = 1.56Hz see Datasheet Table 95, p.54
+#define SLP_CNT 5                 // Sleep count in approximate seconds after interrupt max 85
+#define DATA_RATE AODR_50HZ       // Accel output data rate (Highest-lowest)
+                                  //(AODR_800HZ, AODR_400HZ, AODR_200HZ, AODR_100HZ, AODR_50HZ, AODR_12_5HZ, AODR_6_25HZ, AODR_1_56HZ)
+#define SLEEP_DATA_RATE B11       // Asleep data rate for low power 11 = 1.56Hz see Datasheet Table 95, p.54
 
-//--------------------------------------------------------------------------------------------//
+//-------------------------------------------end of modifiable values-------------------------------------------------//
 
 #define BATT_MIN 3570
 #define BATT_MAX 4200

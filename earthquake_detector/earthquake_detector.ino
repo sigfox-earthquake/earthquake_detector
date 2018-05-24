@@ -17,7 +17,7 @@
 #include "Wire.h"
 
 // Accelerometer
-#include <Streaming.h>
+//#include <Streaming.h>
 #include <FluMMA865xI2C.h>        // Accelerometer I2C bus communication
 #include <FluMMA865xR.h>          // Accelerometer configuration and data register layout
 #include <FluMMA865x.h>           // Accelerometer basic utility functions
@@ -189,13 +189,16 @@ void setup() {
 
   //Set start millis() and initial time offset for clock calibration
   start = millis();
-  if (DEBUG) Serial.println(start);
   initial_time =  (gps_fix.datetime.day * SECS_PER_DAY) +
                   (gps_fix.datetime.hour * SECS_PER_HOUR) +
                   (gps_fix.datetime.minute * SECS_PER_MIN) +
                   gps_fix.datetime.second - (start/1000);
-
-  //  calibrateClock();
+  if (DEBUG){ 
+    Serial.println(start);
+    calibrateClock();
+    print_date();
+    Serial.println();
+  }
 }
 
 void loop() {
@@ -203,7 +206,7 @@ void loop() {
   accelero.work();
   
   // Hour loop to calibrate clock based on GPS
-  if(millis() - timeLastGPS > CLOCK_FIX_LOOP * SECS_PER_MIN){
+  if(millis() - timeLastGPS > (CLOCK_FIX_LOOP * SECS_PER_MIN * 1000)){
     if (DEBUG) Serial.println("Recalibrate clock/gps");
     // Get GPS info
     startGPSFix();
@@ -363,7 +366,7 @@ static void GPSFix(GPS_Fix * fix, bool timeout){
 
 void calibrateClock(){
   // Resets initial_time when you check the gps again
-  long val = (millis()/1000) + initial_time;
+  long val = (millis()/1000) + initial_time + (offset * SECS_PER_HOUR);
   //Serial.println((String)"val: " + val + " initial_time: " + initial_time + " millis: " + millis());
   //Serial.println();
   gps_fix.datetime.day = elapsedDays(val);

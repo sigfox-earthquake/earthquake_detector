@@ -90,7 +90,7 @@ int gpsProcess()
     noSat = 0;
   }
   else noSat++;
-
+  
   printData(newGpsData); // For debug purpose
 
 //printData(true);
