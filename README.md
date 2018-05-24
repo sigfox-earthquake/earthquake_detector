@@ -11,6 +11,7 @@ These instructions will get you a copy of the project up and running on your dev
 Libraries needed:
 Hidnseek library: https://github.com/hidnseek/hidnseek (Also setup instructions for device)
 Accelerometer library: https://github.com/Flummy/FluMMA865x
+Streaming library from: https://github.com/kachok/arduino-libraries
 
 ### Installing
 
@@ -29,15 +30,16 @@ Short:
 ## Running the tests
 
 In DEBUG mode, prints to serial.
+To use USB-Serial port download: http://www.prolific.com.tw/US/ShowProduct.aspx?p_id=229&pcid=41
 
 All easily modifiable values are in def.h:
 
-*Variable clock fix loop
-*Variable device sleep loop
-*Variable gravity scale for accelerometer
-*Variable accelerometer sensitivity threshold,
-*Variable accelerometer sleep count after interrupt
-*Variable accelerometer data rate for sleep and wake modes
+* Variable clock fix loop
+* Variable device sleep loop
+* Variable gravity scale for accelerometer
+* Variable accelerometer sensitivity threshold,
+* Variable accelerometer sleep count after interrupt
+* Variable accelerometer data rate for sleep and wake modes
 
 ## Built With
 
