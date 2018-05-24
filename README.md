@@ -1,6 +1,6 @@
 # earthquake_detector
 
-Hardware low power device to trigger messages when detect earthquakes
+Hardware low power device to trigger messages when detect earthquakes.
 
 ## Getting Started
 
@@ -38,18 +38,14 @@ All easily modifiable values are in def.h:
 *Variable accelerometer sleep count after interrupt
 *Variable accelerometer data rate for sleep and wake modes
 
-## Deployment
-
-Add additional notes about how to deploy this on a live system
-
 ## Built With
 
 * C/C++ (Using Hidnseek device)
 
 ## Authors
 
-* **Harrison Smith** - *Initial work* - [Earthquake_detector](https://github.com/dstar1)
 * **Louis Moreau** - *Initial work* - [Earthquake_detector](https://github.com/luisomoreau)
+* **Harrison Smith** - *Initial work* - [Earthquake_detector](https://github.com/dstar1)
 
 See also the list of [contributors](https://github.com/sigfox-earthquake/contributors) who participated in this project.
 
