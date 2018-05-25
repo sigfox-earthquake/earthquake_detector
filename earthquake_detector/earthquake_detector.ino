@@ -51,7 +51,7 @@ uint8_t msg[12];
 
   //Date & Time structure
   typedef struct {
-    uint16_t year = 0;          ///< Year UTC
+    int16_t year = 0;          ///< Year UTC
     uint8_t hundredths = 0;     //
     uint8_t second = 0;         ///< Seconds 0..59
     uint8_t minute = 0;         ///< Minutes 0..59
@@ -130,8 +130,7 @@ int freeRam () {
 // Everytime interrupt, this function can be called
 void interruptFuction()
 {
-  // Set previous largest values back to 0
-  largest_x = largest_y = largest_z = 0;
+  // Add code here for interrupt action code
 }
 
 // Everytime interrupt, this function can be called
@@ -142,7 +141,11 @@ void sleepFuction()
     Serial.println((String)"Start: " + start);
     Serial.println(millis()/1000);
   }
+  // Set previous largest values back to 0
+  largest_x = largest_y = largest_z = 0;
+
   calibrateClock();
+
   if (DEBUG)
   {
     print_date();
@@ -189,13 +192,16 @@ void setup() {
 
   //Set start millis() and initial time offset for clock calibration
   start = millis();
-  if (DEBUG) Serial.println(start);
   initial_time =  (gps_fix.datetime.day * SECS_PER_DAY) +
                   (gps_fix.datetime.hour * SECS_PER_HOUR) +
                   (gps_fix.datetime.minute * SECS_PER_MIN) +
                   gps_fix.datetime.second - (start/1000);
-
-  //  calibrateClock();
+  if (DEBUG){ 
+    Serial.println(start);
+    calibrateClock();
+    print_date();
+    Serial.println();
+  }
 }
 
 void loop() {
@@ -203,7 +209,7 @@ void loop() {
   accelero.work();
   
   // Hour loop to calibrate clock based on GPS
-  if(millis() - timeLastGPS > CLOCK_FIX_LOOP * SECS_PER_MIN){
+  if(millis() - timeLastGPS > (CLOCK_FIX_LOOP * SECS_PER_MIN * 1000)){
     if (DEBUG) Serial.println("Recalibrate clock/gps");
     // Get GPS info
     startGPSFix();
@@ -231,7 +237,8 @@ void loop() {
 static void sleep_device()
 {
   // Put device to sleep after x amount of time after the last interrupt
-  if(millis() - timeLastTransient > DEVICE_SLEEP_LOOP * 1000){
+  unsigned int long sleep_loop_millis = DEVICE_SLEEP_LOOP * 1000;
+  if(millis() - timeLastTransient > sleep_loop_millis){
     if (DEBUG) Serial.println("Hidenseek sleeping");
     delay(100);
     LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
@@ -363,7 +370,7 @@ static void GPSFix(GPS_Fix * fix, bool timeout){
 
 void calibrateClock(){
   // Resets initial_time when you check the gps again
-  long val = (millis()/1000) + initial_time;
+  long val = (millis()/1000) + initial_time + (offset * SECS_PER_HOUR);
   //Serial.println((String)"val: " + val + " initial_time: " + initial_time + " millis: " + millis());
   //Serial.println();
   gps_fix.datetime.day = elapsedDays(val);

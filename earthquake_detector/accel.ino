@@ -24,13 +24,13 @@ void Accel::work()
   {
     statusR.v = comms.readByte(FluMMA865xR::F_STATUS); // clear all int flags by reading F_STATUS and data output regs
     if(statusR.f.ZYXDR) accelDataHandler();
-    else if (DEBUG) Serial << F("spurious SRC_DRDY interrupt\n");
+    else if (DEBUG) Serial.print("spurious SRC_DRDY interrupt\n");
   }
 
   if(intSourceR.f.SRC_ASLP) // Int source: sleep/wake Int
   {
     sleepFuction();
-    if (DEBUG) Serial.println((String)"SLEEP/ACTIVE");
+    if (DEBUG) Serial.println((String)"ACCEL SLEEP/ACTIVE");
     comms.readByte(FluMMA865xR::SYSMOD); // clear sleep interrupt by reading SYSMOD
   }
 
@@ -41,8 +41,7 @@ void Accel::accelDataHandler()
 {
   accelLsb = accel.readData();
   if(abs(accelLsb.x) > 1 || abs(accelLsb.y) > 1 || abs(accelLsb.z) > 1) {
-      if (DEBUG) Serial << "," << accelLsb.x       << F(",") << accelLsb.y       << F(",") << accelLsb.z
-           << "\n";
+      if (DEBUG) Serial.print((String)"," + accelLsb.x + "," + accelLsb.y + "," + accelLsb.z + "\n");
            
       check_largest(accelLsb.x, accelLsb.y, accelLsb.z);
   }
@@ -56,7 +55,7 @@ void Accel::transientHandler()
   if(millis() - timeLastTransient   <   100) return;
 
   transientSrcR.v = comms.readByte(FluMMA865xR::TRANSIENT_SRC);
-  if(!transientSrcR.f.EA && DEBUG) Serial << F("spurious transient interrupt\n");
+  if(!transientSrcR.f.EA && DEBUG) Serial.print("spurious transient interrupt\n");
   
 //  transientSrcR.print();//uncomment to print when transient event
   timeLastTransient = millis();

@@ -74,7 +74,7 @@ void shutdownSys() { // 3.57V on battery voltage
   digitalWrite(rstPin, LOW);
   serialString(PSTR("Low Bat: "));
   saveEEprom();
-//  sendSigFox(MSG_WEAK_BAT);///////////////////////////////////////////////
+//  sendSigFox(MSG_WEAK_BAT);
   digitalWrite(shdPin, LOW);
   delay(500);
 }

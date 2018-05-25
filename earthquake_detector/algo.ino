@@ -22,7 +22,10 @@
 
  void check_largest(int x, int y, int z)
  {
-      //find largest x, y, z
+    //find largest x, y, z
+    x = abs(x);
+    y = abs(y);
+    z = abs(z);
     if (x > largest_x) largest_x = x;
     if (y > largest_y) largest_y = y;
     if (z > largest_z) largest_z = z;
