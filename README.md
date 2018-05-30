@@ -42,6 +42,7 @@ To use USB-Serial port download(mentioned earlier): http://www.prolific.com.tw/U
 All easily modifiable values are in def.h:
 
 * Variable clock fix loop
+* Variable GPS fix loop
 * Variable device sleep loop
 * Variable gravity scale for accelerometer
 * Variable accelerometer sensitivity threshold,
