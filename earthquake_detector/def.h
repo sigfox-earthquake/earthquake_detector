@@ -19,8 +19,9 @@ const int offset = -7;  // Pacific Daylight Time (USA)
 
 #define DEBUG 1                   // 1 = DEBUG mode, 0 = regulare
 
+#define GPS_LOOP 60               // Time in seconds for GPS init loop
 #define CLOCK_FIX_LOOP 60         // Time in minutes to recalibrate clock based on GPS
-#define DEVICE_SLEEP_LOOP 60      // Time in seconds to recalibrate clock based on GPS
+#define DEVICE_SLEEP_LOOP 60      // Time in seconds to put device to sleep after last interrupt (not active)
 
 #define MASS 45                   // Mass of device
 

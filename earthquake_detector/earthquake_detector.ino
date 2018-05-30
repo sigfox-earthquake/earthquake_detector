@@ -141,6 +141,7 @@ void sleepFuction()
     Serial.println((String)"Start: " + start);
     Serial.println(millis()/1000);
   }
+
   // Set previous largest values back to 0
   largest_x = largest_y = largest_z = 0;
 
@@ -174,34 +175,22 @@ void setup() {
   GPS.begin(4800);
   delay(100);
 
-  //Declare other variables
+  // Declare other variables
   pinMode(DIGITAL_OUTPUT, OUTPUT);
   pinMode(DIGITAL_PULLUP, INPUT_PULLUP);
 
-  //init GPIO
+  // Init GPIO
   HidnSeek.initGPIO(false);
 
-  //init battery
+  // Init battery
   init_battery();
 
-  //init accelerometer
+  // Init accelerometer
   init_accel.begin();
 
-  //GPS, RAM
+  // RAM and GPS fix
   setupDevice();
 
-  //Set start millis() and initial time offset for clock calibration
-  start = millis();
-  initial_time =  (gps_fix.datetime.day * SECS_PER_DAY) +
-                  (gps_fix.datetime.hour * SECS_PER_HOUR) +
-                  (gps_fix.datetime.minute * SECS_PER_MIN) +
-                  gps_fix.datetime.second - (start/1000);
-  if (DEBUG){ 
-    Serial.println(start);
-    calibrateClock();
-    print_date();
-    Serial.println();
-  }
 }
 
 void loop() {
@@ -210,15 +199,9 @@ void loop() {
   
   // Hour loop to calibrate clock based on GPS
   if(millis() - timeLastGPS > (CLOCK_FIX_LOOP * SECS_PER_MIN * 1000)){
-    if (DEBUG) Serial.println("Recalibrate clock/gps");
-    // Get GPS info
+    if (DEBUG) Serial.println("Recalibrate clock/GPS");
+    // Get GPS info and if DEBUG print it out with calibrated time
     startGPSFix();
-    delay(10);
-    start = millis();
-    initial_time =  (gps_fix.datetime.day * SECS_PER_DAY) +
-                    (gps_fix.datetime.hour * SECS_PER_HOUR) +
-                    (gps_fix.datetime.minute * SECS_PER_MIN) +
-                    gps_fix.datetime.second - (start/1000);
   }
 
   // Put device to sleep after x amount of time
@@ -241,7 +224,7 @@ static void sleep_device()
   if(millis() - timeLastTransient > sleep_loop_millis){
     if (DEBUG) Serial.println("Hidenseek sleeping");
     delay(100);
-    LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
+    LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF); // FOREVER until interrupt?
   }
 }
 
@@ -322,11 +305,39 @@ static void setupDevice(){
  *
  ******************************************************************************/
 void startGPSFix(){//uint16_t timeout, void (*callback)(GPS_Fix *fix, bool timeout)){
-  while (!gpsProcess())
-    if (DEBUG) Serial.println("Not calibrated");
-  gpsProcess();
-}
+  while (noSat < GPS_LOOP) {
+    start = millis();
+    if (gpsProcess() && noSat == 0) {
 
+      // Set start millis() and initial time offset for clock calibration
+      initial_time =  (gps_fix.datetime.day * SECS_PER_DAY) +
+                      (gps_fix.datetime.hour * SECS_PER_HOUR) +
+                      (gps_fix.datetime.minute * SECS_PER_MIN) +
+                      gps_fix.datetime.second - (start/1000);
+      if (DEBUG){
+        Serial.println("Found GPS");
+        Serial.println((String)"Time offset/new millis start = " + start);
+        calibrateClock();
+        print_date();
+        Serial.println();
+      }
+      break ;
+    }
+  }
+  // No GPS fix within the timeout GPS_LOOP
+  if (noSat == GPS_LOOP) 
+  {
+    // Set so that time is still calibrated if no GPS
+    initial_time =  (gps_fix.datetime.day * SECS_PER_DAY) +
+                (gps_fix.datetime.hour * SECS_PER_HOUR) +
+                (gps_fix.datetime.minute * SECS_PER_MIN) +
+                gps_fix.datetime.second - (start/1000);
+
+    if (DEBUG) Serial.println("Cannot get GPS fix. (Do something)");
+//    gpsStandby(); // Impliment what to do if GPS cannot get a fix
+  }
+  noSat = 0;
+}
 
 /***************************************************************************//**
  * @brief
