@@ -9,7 +9,7 @@ These instructions will get you a copy of the project up and running on your dev
 ### Prerequisites
 
 Follow all instructions here to get hidnseek board working on arduino IDE:
-https://github.com/hidnseek/hidnseek/tree/master/arduino
+https://github.com/hidnseek/hidnseek/tree/revC/arduino
 
 Libraries needed:
 Hidnseek library: https://github.com/hidnseek/hidnseek
